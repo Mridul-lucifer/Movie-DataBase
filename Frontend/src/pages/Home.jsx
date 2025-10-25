@@ -50,24 +50,41 @@ export default function Home() {
   };
 
   // ➕ Add movie to user's list
+  // ➕ Add movie to user's list
   const addMovie = async (movie, status) => {
-    try {
-      await fetch(`${API_URL}/api/movies/add`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          user_id: user.id,
-          tmdb_id: movie.id,
-          title: movie.title,
-          poster_path: movie.poster_path,
-          status,
-        }),
-      });
-      reloadMovies();
-    } catch (err) {
-      console.error("Error adding movie:", err);
-    }
-  };
+  if (!user) {
+    alert("Please log in to save movies!");
+    navigate("/login");
+    return;
+  }
+
+  // Check if movie already exists locally
+  const exists = movieList.some((m) => m.tmdb_id === movie.id);
+  if (exists) {
+    alert("This movie is already in your list!");
+    return;
+  }
+
+  const res = await fetch(`${import.meta.env.VITE_API_URL}/api/movies/add`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      user_id: user.id,
+      tmdb_id: movie.id,
+      title: movie.title,
+      poster_path: movie.poster_path,
+      status,
+    }),
+  });
+
+  const data = await res.json();
+  if (res.ok) {
+    reloadMovies();
+  } else {
+    alert(data.error);
+  }
+};
+
 
   // Delete movie
   const deleteMovie = async (id) => {
