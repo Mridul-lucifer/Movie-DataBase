@@ -1,19 +1,24 @@
 import { useState, useEffect } from "react";
-import { CheckCircle, Clock, Eye, Pencil, XCircle } from "lucide-react";
+import { CheckCircle, Clock, Eye, XCircle, LayoutGrid, List } from "lucide-react";
 
 export default function Home() {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
   const [movieList, setMovieList] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [viewMode, setViewMode] = useState("grid"); // "grid" or "list"
+  const [collapsed, setCollapsed] = useState({
+    Watched: false,
+    "In Progress": false,
+    "Not Yet": false,
+  });
 
   const API_KEY = import.meta.env.VITE_TMDB_KEY;
   const API_URL = import.meta.env.VITE_API_URL;
 
-  // 🧑‍💻 Simulated user (replace with logged-in user data)
   const user = JSON.parse(localStorage.getItem("user")) || { id: 1 };
 
-  // 🔁 Fetch all movies for this user
+  // 🧠 Load movies
   const reloadMovies = async () => {
     try {
       const res = await fetch(`${API_URL}/api/movies/${user.id}`);
@@ -28,7 +33,7 @@ export default function Home() {
     reloadMovies();
   }, []);
 
-  // 🔍 Search movies via TMDB
+  // 🔍 Search
   const handleSearch = async (e) => {
     e.preventDefault();
     if (!query.trim()) return;
@@ -49,71 +54,31 @@ export default function Home() {
     }
   };
 
-  // ➕ Add movie to user's list
-  // ➕ Add movie to user's list
+  // ➕ Add movie
   const addMovie = async (movie, status) => {
-  if (!user) {
-    alert("Please log in to save movies!");
-    navigate("/login");
-    return;
-  }
+    const exists = movieList.some((m) => m.tmdb_id === movie.id);
+    if (exists) return alert("Movie already in your list!");
 
-  // Check if movie already exists locally
-  const exists = movieList.some((m) => m.tmdb_id === movie.id);
-  if (exists) {
-    alert("This movie is already in your list!");
-    return;
-  }
-
-  const res = await fetch(`${import.meta.env.VITE_API_URL}/api/movies/add`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      user_id: user.id,
-      tmdb_id: movie.id,
-      title: movie.title,
-      poster_path: movie.poster_path,
-      status,
-    }),
-  });
-
-  const data = await res.json();
-  if (res.ok) {
-    reloadMovies();
-  } else {
-    alert(data.error);
-  }
-};
-
-
-  // Delete movie
-  const deleteMovie = async (id) => {
-    const confirmDelete = window.confirm("Are you sure you want to remove this movie?");
-    if (!confirmDelete) return;
-
-    await fetch(`${import.meta.env.VITE_API_URL}/api/movies/delete/${id}`, {
-      method: "DELETE",
+    await fetch(`${API_URL}/api/movies/add`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        user_id: user.id,
+        tmdb_id: movie.id,
+        title: movie.title,
+        poster_path: movie.poster_path,
+        status,
+      }),
     });
     reloadMovies();
   };
 
-
-
-  // ✏️ Update movie status
-  const updateStatus = async (id, newStatus) => {
-    try {
-      await fetch(`${API_URL}/api/movies/update/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus }),
-      });
-      reloadMovies();
-    } catch (err) {
-      console.error("Error updating movie:", err);
-    }
+  // 🗑 Delete
+  const deleteMovie = async (id) => {
+    await fetch(`${API_URL}/api/movies/delete/${id}`, { method: "DELETE" });
+    reloadMovies();
   };
 
-  // 🎯 Filter movies by status
   const getMoviesByStatus = (status) =>
     movieList.filter((m) => m.status === status);
 
@@ -123,7 +88,7 @@ export default function Home() {
         🎬 My Movie Tracker
       </h1>
 
-      {/* Search Form */}
+      {/* Search Bar */}
       <form
         onSubmit={handleSearch}
         className="flex flex-col sm:flex-row gap-3 max-w-2xl mx-auto mb-10"
@@ -143,6 +108,26 @@ export default function Home() {
         </button>
       </form>
 
+      {/* View Mode Toggle */}
+      <div className="flex justify-center items-center mb-8 space-x-4">
+        <button
+          onClick={() => setViewMode("grid")}
+          className={`p-2 rounded-lg ${
+            viewMode === "grid" ? "bg-indigo-600" : "bg-indigo-400/40"
+          }`}
+        >
+          <LayoutGrid size={20} />
+        </button>
+        <button
+          onClick={() => setViewMode("list")}
+          className={`p-2 rounded-lg ${
+            viewMode === "list" ? "bg-indigo-600" : "bg-indigo-400/40"
+          }`}
+        >
+          <List size={20} />
+        </button>
+      </div>
+
       {/* Search Results */}
       {results.length > 0 && (
         <div className="max-w-6xl mx-auto mb-16">
@@ -157,14 +142,21 @@ export default function Home() {
               }}
               className="text-sm bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg text-white transition"
             >
-              ❌ Clear Recommendations
+              ❌ Clear
             </button>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6">
+
+          <div
+            className={
+              viewMode === "grid"
+                ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"
+                : "flex flex-col space-y-3"
+            }
+          >
             {results.map((movie) => (
               <div
                 key={movie.id}
-                className="bg-white/10 rounded-lg p-3 shadow-lg hover:scale-105 transition-transform"
+                className="bg-white/10 rounded-lg p-3 shadow-lg hover:scale-105 transition-transform flex flex-col sm:flex-row sm:items-center"
               >
                 <img
                   src={
@@ -173,33 +165,36 @@ export default function Home() {
                       : "https://via.placeholder.com/300x450?text=No+Image"
                   }
                   alt={movie.title}
-                  className="rounded-md mb-3 w-full h-48 sm:h-64 md:h-72 object-cover shadow-md"
+                  className={`rounded-md mb-3 sm:mb-0 ${
+                    viewMode === "grid"
+                      ? "w-full h-48 object-cover"
+                      : "w-20 h-28 mr-3 object-cover"
+                  }`}
                 />
-                <h3 className="font-semibold text-sm text-center">
-                  {movie.title}
-                </h3>
-                <div className="flex justify-center mt-3 space-x-2">
-                  <button
-                    onClick={() => addMovie(movie, "Watched")}
-                    className="p-2 rounded-full bg-green-500 hover:bg-green-600"
-                    title="Mark as Watched"
-                  >
-                    <CheckCircle size={18} />
-                  </button>
-                  <button
-                    onClick={() => addMovie(movie, "In Progress")}
-                    className="p-2 rounded-full bg-yellow-500 hover:bg-yellow-600"
-                    title="Mark as In Progress"
-                  >
-                    <Clock size={18} />
-                  </button>
-                  <button
-                    onClick={() => addMovie(movie, "Not Yet")}
-                    className="p-2 rounded-full bg-gray-500 hover:bg-gray-600"
-                    title="Mark as Not Yet Watched"
-                  >
-                    <Eye size={18} />
-                  </button>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-sm sm:text-base mb-2">
+                    {movie.title}
+                  </h3>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => addMovie(movie, "Watched")}
+                      className="p-2 rounded-full bg-green-500 hover:bg-green-600"
+                    >
+                      <CheckCircle size={18} />
+                    </button>
+                    <button
+                      onClick={() => addMovie(movie, "In Progress")}
+                      className="p-2 rounded-full bg-yellow-500 hover:bg-yellow-600"
+                    >
+                      <Clock size={18} />
+                    </button>
+                    <button
+                      onClick={() => addMovie(movie, "Not Yet")}
+                      className="p-2 rounded-full bg-gray-500 hover:bg-gray-600"
+                    >
+                      <Eye size={18} />
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -209,54 +204,72 @@ export default function Home() {
 
       {/* Movie Lists */}
       <div className="max-w-6xl mx-auto">
-        {["Watched", "In Progress", "Not Yet"].map((status) => (
-          <div key={status} className="mb-10">
-            <h2 className="text-2xl font-semibold mb-4 text-indigo-300">
-              {status} 🎥
-            </h2>
-            {getMoviesByStatus(status).length === 0 ? (
-              <p className="text-gray-400">No movies here yet.</p>
-            ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6">
-                {getMoviesByStatus(status).map((movie) => (
-                  <div
-                    key={movie.id}
-                    className="bg-white/10 rounded-lg p-3 shadow-lg hover:scale-105 transition-transform relative"
-                  >
-                    <img
-                      src={
-                        movie.poster_path
-                          ? `https://image.tmdb.org/t/p/w300${movie.poster_path}`
-                          : "https://via.placeholder.com/300x450?text=No+Image"
-                      }
-                      alt={movie.title}
-                      className="rounded-md mb-3 w-full h-48 sm:h-64 md:h-72 object-cover shadow-md"
-                    />
-                    <h3 className="font-semibold text-sm text-center mb-2">
-                      {movie.title}
-                    </h3>
-                    {status !== "Watched" && (
-                      <button
-                        onClick={() => updateStatus(movie.id, "Watched")}
-                        className="absolute top-2 right-2 bg-green-600 hover:bg-green-700 text-white rounded-full p-2"
-                        title="Mark as Watched"
-                      >
-                        <Pencil size={16} />
-                      </button>
-                    )}
-                    <button
-                      onClick={() => deleteMovie(movie.id)}
-                      className="absolute top-2 left-2 bg-red-600 hover:bg-red-700 text-white rounded-full p-2"
-                      title="Remove Movie"
+        {["Watched", "In Progress", "Not Yet"].map((status) => {
+          const movies = getMoviesByStatus(status);
+          return (
+            <div key={status} className="mb-10">
+              <button
+                onClick={() =>
+                  setCollapsed((prev) => ({
+                    ...prev,
+                    [status]: !prev[status],
+                  }))
+                }
+                className="flex items-center justify-between w-full text-left bg-indigo-700/40 px-4 py-3 rounded-lg hover:bg-indigo-700/60 transition"
+              >
+                <span className="text-xl font-semibold text-indigo-200">
+                  {status} 🎥
+                </span>
+                <span className="text-sm text-gray-300">
+                  {movies.length} movie{movies.length !== 1 ? "s" : ""}
+                </span>
+              </button>
+
+              {!collapsed[status] && (
+                <div
+                  className={
+                    viewMode === "grid"
+                      ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 mt-4"
+                      : "flex flex-col space-y-3 mt-4"
+                  }
+                >
+                  {movies.map((movie) => (
+                    <div
+                      key={movie.id}
+                      className="relative bg-white/10 rounded-lg p-3 shadow-lg flex flex-col sm:flex-row sm:items-center hover:scale-[1.02] transition-transform"
                     >
-                      <XCircle size={16} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        ))}
+                      <img
+                        src={
+                          movie.poster_path
+                            ? `https://image.tmdb.org/t/p/w300${movie.poster_path}`
+                            : "https://via.placeholder.com/300x450?text=No+Image"
+                        }
+                        alt={movie.title}
+                        className={`rounded-md ${
+                          viewMode === "grid"
+                            ? "w-full h-48 object-cover"
+                            : "w-20 h-28 mr-3 object-cover"
+                        }`}
+                      />
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-sm sm:text-base mb-2">
+                          {movie.title}
+                        </h3>
+                      </div>
+                      <button
+                        onClick={() => deleteMovie(movie.id)}
+                        className="absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white rounded-full p-2"
+                        title="Remove Movie"
+                      >
+                        <XCircle size={16} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
