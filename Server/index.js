@@ -14,13 +14,5 @@ app.use(express.json());
 app.use("/auth", userRouter);
 app.use("/api/movies", dataRouter);
 
-// ✅ Serve frontend build
-app.use(express.static(path.join(__dirname, "../client/dist")));
-
-// ✅ Catch-all route for React Router (works in Express 5)
-app.get(/.*/, (req, res) => {
-  res.sendFile(path.join(__dirname, "../client/dist/index.html"));
-});
-
 const port = process.env.PORT || 3000;
 app.listen(port, () => console.log(`✅ Server running on port ${port}`));
