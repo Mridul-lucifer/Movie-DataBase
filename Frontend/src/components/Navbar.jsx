@@ -1,18 +1,25 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { Menu, X } from "lucide-react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import { Menu, X, Film } from "lucide-react";
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [user, setUser] = useState(null);
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
-    // 🧠 Check if user is logged in
+    // ✅ Load user data from localStorage
     const storedUser = localStorage.getItem("user");
-    if (storedUser) setUser(JSON.parse(storedUser));
-
-  }, []);
+    if (storedUser) {
+      try {
+        const parsed = JSON.parse(storedUser);
+        setUser(parsed);
+      } catch (err) {
+        console.error("Error parsing user:", err);
+      }
+    }
+  }, [location.pathname]); // refresh when route changes
 
   const handleLogout = () => {
     localStorage.removeItem("user");
@@ -21,36 +28,55 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="bg-indigo-600 text-white shadow-md">
+    <nav className="bg-indigo-600 text-white shadow-md sticky top-0 z-50">
       <div className="max-w-7xl mx-auto flex justify-between items-center px-5 py-3">
-        {/* Logo / Brand */}
+        {/* 🎬 Logo / Brand */}
         <Link
           to="/"
-          className="text-2xl font-bold tracking-wide hover:text-indigo-200 transition"
+          className="text-2xl font-bold tracking-wide flex items-center gap-2 hover:text-indigo-200 transition"
         >
-          🎬 MovieTracker
+          <Film size={24} />
+          MovieTracker
         </Link>
 
-        {/* Desktop Menu */}
+        {/* 🖥️ Desktop Menu */}
         <div className="hidden md:flex items-center space-x-6">
           <Link
             to="/"
-            className="hover:text-indigo-200 transition font-medium"
+            className={`hover:text-indigo-200 transition font-medium ${
+              location.pathname === "/" ? "underline underline-offset-4" : ""
+            }`}
           >
             Home
           </Link>
+
+          <Link
+            to="/reels"
+            className={`hover:text-indigo-200 transition font-medium ${
+              location.pathname === "/reels"
+                ? "underline underline-offset-4"
+                : ""
+            }`}
+          >
+            Reels
+          </Link>
+
           <Link
             to="/about"
-            className="hover:text-indigo-200 transition font-medium"
+            className={`hover:text-indigo-200 transition font-medium ${
+              location.pathname === "/about"
+                ? "underline underline-offset-4"
+                : ""
+            }`}
           >
             About
           </Link>
 
-          {/* If logged in */}
+          {/* 👤 Logged-in state */}
           {user ? (
             <div className="flex items-center space-x-4">
               <span className="bg-indigo-500 px-3 py-1 rounded-full text-sm">
-                👋 {user.name}
+                👋 {user.name || "User"}
               </span>
               <button
                 onClick={handleLogout}
@@ -77,7 +103,7 @@ export default function Navbar() {
           )}
         </div>
 
-        {/* Mobile Menu Button */}
+        {/* 📱 Mobile Menu Button */}
         <button
           onClick={() => setMenuOpen(!menuOpen)}
           className="md:hidden focus:outline-none"
@@ -86,11 +112,14 @@ export default function Navbar() {
         </button>
       </div>
 
-      {/* Mobile Dropdown */}
+      {/* 📱 Mobile Dropdown */}
       {menuOpen && (
         <div className="md:hidden bg-indigo-700 text-white flex flex-col space-y-3 px-5 py-4">
           <Link to="/" onClick={() => setMenuOpen(false)}>
             Home
+          </Link>
+          <Link to="/reels" onClick={() => setMenuOpen(false)}>
+            Reels
           </Link>
           <Link to="/about" onClick={() => setMenuOpen(false)}>
             About
@@ -99,7 +128,7 @@ export default function Navbar() {
           {user ? (
             <>
               <span className="block bg-indigo-500 px-3 py-1 rounded-full text-sm text-center">
-                👋 {user.name}
+                👋 {user.name || "User"}
               </span>
               <button
                 onClick={() => {
